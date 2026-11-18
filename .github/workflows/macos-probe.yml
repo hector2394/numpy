@@ -1,0 +1,58 @@
+name: NumPy 33369 macOS probe
+
+'on':
+  push:
+    branches: [numpy-33369-macos-probe]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Check out the diagnostic
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Check out the failing NumPy revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: numpy/numpy
+          ref: f7fdace610a999f8babe4d3be21e1ed855aaf478
+          path: numpy-src
+          submodules: true
+          persist-credentials: false
+      - name: Set up cibuildwheel Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.13'
+      - name: Build and run the memory checks
+        env:
+          CIBW_ARCHS_MACOS: arm64
+          CIBW_BUILD: cp314t-macosx_arm64
+          CIBW_ENABLE: cpython-freethreading
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=14.0 INSTALL_OPENBLAS=false
+          CIBW_TEST_COMMAND: >-
+            python -c 'import platform, sys, sysconfig, numpy;
+            assert platform.machine() == "arm64";
+            assert sys.version_info[:3] == (3, 14, 10);
+            assert sysconfig.get_config_var("Py_GIL_DISABLED") == 1;
+            print(sys.version); numpy.show_config()'
+            && python "{project}/../memory_probe.py" --output "{project}/../macos-probe.json"
+            && python -m pytest --pyargs numpy._core.tests.test_stringdtype
+            -k 'large_string or function_tables_cover_np_strings' -ra
+        run: |
+          test "$(uname -m)" = arm64
+          sw_vers
+          python -m pip install 'cibuildwheel==4.3.5'
+          python -m cibuildwheel --platform macos --output-dir wheelhouse numpy-src
+      - name: Upload probe results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: numpy-33369-macos-probe
+          path: macos-probe.json
+          if-no-files-found: warn
+          retention-days: 7
