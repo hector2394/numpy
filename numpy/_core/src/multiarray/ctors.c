@@ -3088,13 +3088,13 @@ _arange_safe_ceil_to_intp(double value)
     double ivalue;
 
     ivalue = npy_ceil(value);
-    /* condition inverted to handle NaN */
     if (npy_isnan(ivalue)) {
         PyErr_SetString(PyExc_ValueError,
             "arange: cannot compute length");
         return -1;
     }
-    if (!((double)NPY_MIN_INTP <= ivalue && ivalue <= (double)NPY_MAX_INTP)) {
+    /* NPY_MAX_INTP can round up to this exclusive upper bound. */
+    if (ivalue < (double)NPY_MIN_INTP || ivalue >= -(double)NPY_MIN_INTP) {
         PyErr_SetString(PyExc_OverflowError,
                 "arange: overflow while computing length");
         return -1;

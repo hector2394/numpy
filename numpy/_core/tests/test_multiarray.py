@@ -11355,6 +11355,11 @@ class TestArange:
             np.arange, 0, np.inf
         )
 
+    def test_length_exceeds_intp(self):
+        limit = float(1 << (np.iinfo(np.intp).bits - 1))
+        with pytest.raises(ValueError, match="size exceeded"):
+            np.arange(-limit, limit, 2)
+
     def test_nan_step(self):
         assert_raises_regex(
             ValueError, "cannot compute length",

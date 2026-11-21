@@ -2690,6 +2690,13 @@ class TestFilterwindows:
             assert_almost_equal(np.sum(w, axis=0), 10, 15)
 
 
+@pytest.mark.skipif(np.dtype(np.intp).itemsize != 8, reason="requires 64-bit intp")
+@pytest.mark.parametrize("length", [2**63 - 1, 2**63 - 2])
+def test_hamming_length_exceeds_intp(length):
+    with pytest.raises(ValueError, match="size exceeded"):
+        hamming(length)
+
+
 class TestTrapezoid:
 
     def test_simple(self):
