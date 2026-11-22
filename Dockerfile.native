@@ -1,0 +1,10 @@
+FROM quay.io/pypa/musllinux_1_2_aarch64@sha256:1db347533f8a7ea39aa20b0203f4e4af00630cdb621216a2b43771523c9983c5
+ENV PATH=/opt/python/cp315-cp315t/bin:$PATH
+RUN git clone https://github.com/numpy/numpy.git /numpy-src && cd /numpy-src && git checkout 77e0c6b661c16e0bbecba13486f4b127ecdac38b && git submodule update --init --depth 1
+RUN python -m pip install pytest==9.1.1 hypothesis==6.170.14 pytest-xdist==3.8.0 scipy-openblas64==0.3.34.481.3
+RUN mkdir /openblas && python -c "import scipy_openblas64; print(scipy_openblas64.get_pkg_config())" > /openblas/scipy-openblas.pc
+ENV PKG_CONFIG_PATH=/openblas
+RUN python -m pip install /numpy-src -v -Csetup-args=-Duse-ilp64=true -Csetup-args=-Dallow-noblas=false -Ccompile-args=-j4
+WORKDIR /tmp
+RUN python -m pip install pytest-cov==7.1.0 pytest-timeout==2.4.0 meson==1.12.1
+COPY native_probe.py /native_probe.py

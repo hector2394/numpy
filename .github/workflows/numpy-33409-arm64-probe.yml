@@ -1,0 +1,37 @@
+name: NumPy 33409 native ARM64 diagnostic
+'on':
+  push:
+    branches: [numpy-33409-arm64-probe]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Build failing NumPy revision
+        run: |
+          set -o pipefail
+          test "$(uname -m)" = aarch64
+          mkdir evidence
+          docker build --progress plain -t numpy33409 -f Dockerfile.native . 2>&1 | tee evidence/build.log
+      - name: Run repeated probe and full suite
+        run: |
+          set -o pipefail
+          docker run --name numpy33409-probe -v "$PWD/evidence:/evidence" -e NPY_AVAILABLE_MEM="4 GB" -e OPENBLAS_NUM_THREADS=1 -e PYTHONPATH=/ numpy33409 sh -c '
+            python /native_probe.py
+            probe_status=$?
+            python -c "import sys, numpy; sys.exit(not numpy.test(label=\"full\", extra_argv=[\"-p\", \"native_probe\", \"-n=4\", \"--junitxml=/evidence/results.xml\", \"-ra\"]))"
+            suite_status=$?
+            test "$probe_status" -eq 0 && test "$suite_status" -eq 0
+          ' 2>&1 | tee evidence/test.log
+      - name: Upload diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: numpy-33409-arm64-evidence
+          path: evidence/
+          retention-days: 7
