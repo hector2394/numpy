@@ -6,5 +6,5 @@ RUN mkdir /openblas && python -c "import scipy_openblas64; print(scipy_openblas6
 ENV PKG_CONFIG_PATH=/openblas
 RUN python -m pip install /numpy-src -v -Csetup-args=-Duse-ilp64=true -Csetup-args=-Dallow-noblas=false -Ccompile-args=-j4
 WORKDIR /tmp
-RUN python -m pip install pytest-cov==7.1.0 pytest-timeout==2.4.0 meson==1.12.1
+RUN python -m pip install pytest-cov==7.1.0 pytest-timeout==2.4.0 meson==1.12.1 ninja==1.13.2
 COPY native_probe.py /native_probe.py
